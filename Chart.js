@@ -4850,6 +4850,7 @@
 					y: reset ? scaleBase : this.calculatePointY(this.getDataset().data[index], index, this.index, this.chart.isCombo),
 					// Appearance
 					tension: point.custom && point.custom.tension ? point.custom.tension : helpers.getValueOrDefault(this.getDataset().tension, this.chart.options.elements.line.tension),
+					isPointerCross: this.getDataset().isPointerCross, /* Robin modified (2016-03-08) */					
 					radius: point.custom && point.custom.radius ? point.custom.radius : helpers.getValueAtIndexOrDefault(this.getDataset().radius, index, this.chart.options.elements.point.radius),
 					backgroundColor: this.getPointBackgroundColor(point, index),
 					borderColor: this.getPointBorderColor(point, index),
@@ -6914,9 +6915,31 @@
 			if (vm.skip) {
 				return;
 			}
+			
+			/* Robin modified (2016-03-08) */
+			if(vm.isPointerCross){
+			
+				ctx.beginPath();
 
-			if (vm.radius > 0 || vm.borderWidth > 0) {
+				ctx.moveTo(vm.x - vm.radius, vm.y - vm.radius);
+				ctx.lineTo(vm.x + vm.radius, vm.y + vm.radius);
 
+				ctx.moveTo(vm.x + vm.radius, vm.y - vm.radius);
+				ctx.lineTo(vm.x - vm.radius, vm.y + vm.radius);
+				ctx.closePath();
+				
+				ctx.strokeStyle = vm.borderColor || Chart.defaults.global.defaultColor;
+				ctx.lineWidth = vm.borderWidth || Chart.defaults.global.elements.point.borderWidth;
+				ctx.fillStyle = vm.backgroundColor || Chart.defaults.global.defaultColor;
+				ctx.fill();
+				
+				
+				ctx.stroke();			
+				
+			}
+			
+			/* Robin modified && !vm.isPointerCross (2016-03-08) */
+			if ((!vm.isPointerCross) && (vm.radius > 0 || vm.borderWidth > 0)) {
 				ctx.beginPath();
 
 				ctx.arc(vm.x, vm.y, vm.radius || Chart.defaults.global.elements.point.radius, 0, Math.PI * 2);
