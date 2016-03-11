@@ -84,9 +84,9 @@ function buildTask() {
 				"  } else {\n"+
 				"    root.<%= namespace %> = factory.call(root,<%= global %>);\n"+
 				"  }\n"+
-				"}(this, function(<%= param %>) {\n"+
+				"}(this || window, function(<%= param %>) {\n"+
 				"<%= contents %>\n"+
-				"return <%= exports %>;\n"+
+				"return this.<%= exports %>;\n"+
 				"}));\n",
 			dependencies: function() {
 				return ['moment']
