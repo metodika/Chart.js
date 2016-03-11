@@ -194,62 +194,57 @@
 			var firstWidth = this.ctx.measureText(this.ticks[0]).width;
 			var lastWidth = this.ctx.measureText(this.ticks[this.ticks.length - 1]).width;
 			var firstRotated;
-			var lastRotated;
-
-			this.paddingRight = lastWidth / 2 + 3;
-			this.paddingLeft = firstWidth / 2 + 3;
 
 			this.labelRotation = 0;
+			this.paddingRight = 0;
+			this.paddingLeft = 0;
 
-			if (this.options.display && this.isHorizontal()) {
-				var originalLabelWidth = helpers.longestText(this.ctx, labelFont, this.ticks);
-				var cosRotation;
-				var sinRotation;
+			if (this.options.display) {
+				if (this.isHorizontal()) {
+					this.paddingRight = lastWidth / 2 + 3;
+					this.paddingLeft = firstWidth / 2 + 3;
 
-				this.labelWidth = originalLabelWidth;
-
-				// Allow 3 pixels x2 padding either side for label readability
-				// only the index matters for a dataset scale, but we want a consistent interface between scales
-
-				var tickWidth = this.getPixelForTick(1) - this.getPixelForTick(0) - 6;
-
-				//Max label rotation can be set or default to 90 - also act as a loop counter
-				while (this.labelWidth > tickWidth && this.labelRotation < this.options.ticks.maxRotation) {
-					cosRotation = Math.cos(helpers.toRadians(this.labelRotation));
-					sinRotation = Math.sin(helpers.toRadians(this.labelRotation));
-
-					firstRotated = cosRotation * firstWidth;
-					lastRotated = cosRotation * lastWidth;
-
-					// We're right aligning the text now.
-					if (firstRotated + this.options.ticks.fontSize / 2 > this.yLabelWidth) {
-						this.paddingLeft = firstRotated + this.options.ticks.fontSize / 2;
+					if (!this.longestTextCache) {
+						this.longestTextCache = {};
 					}
+					var originalLabelWidth = helpers.longestText(this.ctx, labelFont, this.ticks, this.longestTextCache);
+					var labelWidth = originalLabelWidth;
+					var cosRotation;
+					var sinRotation;
 
-					this.paddingRight = this.options.ticks.fontSize / 2;
+					// Allow 3 pixels x2 padding either side for label readability
+					// only the index matters for a dataset scale, but we want a consistent interface between scales
+					var tickWidth = this.getPixelForTick(1) - this.getPixelForTick(0) - 6;
 
-					if (sinRotation * originalLabelWidth > this.maxHeight) {
-						// go back one step
-						this.labelRotation--;
-						break;
+					//Max label rotation can be set or default to 90 - also act as a loop counter
+					while (labelWidth > tickWidth && this.labelRotation < this.options.ticks.maxRotation) {
+						cosRotation = Math.cos(helpers.toRadians(this.labelRotation));
+						sinRotation = Math.sin(helpers.toRadians(this.labelRotation));
+
+						firstRotated = cosRotation * firstWidth;
+
+						// We're right aligning the text now.
+						if (firstRotated + this.options.ticks.fontSize / 2 > this.yLabelWidth) {
+							this.paddingLeft = firstRotated + this.options.ticks.fontSize / 2;
+						}
+
+						this.paddingRight = this.options.ticks.fontSize / 2;
+
+						if (sinRotation * originalLabelWidth > this.maxHeight) {
+							// go back one step
+							this.labelRotation--;
+							break;
+						}
+
+						this.labelRotation++;
+						labelWidth = cosRotation * originalLabelWidth;
 					}
-
-					this.labelRotation++;
-					this.labelWidth = cosRotation * originalLabelWidth;
-
 				}
-			} else {
-				this.labelWidth = 0;
-				this.paddingRight = 0;
-				this.paddingLeft = 0;
 			}
 
 			if (this.margins) {
-				this.paddingLeft -= this.margins.left;
-				this.paddingRight -= this.margins.right;
-
-				this.paddingLeft = Math.max(this.paddingLeft, 0);
-				this.paddingRight = Math.max(this.paddingRight, 0);
+				this.paddingLeft = Math.max(this.paddingLeft - this.margins.left, 0);
+				this.paddingRight = Math.max(this.paddingRight - this.margins.right, 0);
 			}
 		},
 		afterCalculateTickRotation: function() {
@@ -297,9 +292,15 @@
 				var labelFont = helpers.fontString(this.options.ticks.fontSize,
 					this.options.ticks.fontStyle, this.options.ticks.fontFamily);
 
+				if (!this.longestTextCache) {
+					this.longestTextCache = {};
+				}
+
+				var largestTextWidth = helpers.longestText(this.ctx, labelFont, this.ticks, this.longestTextCache);
+
 				if (this.isHorizontal()) {
 					// A horizontal axis is more constrained by the height.
-					this.longestLabelWidth = helpers.longestText(this.ctx, labelFont, this.ticks);
+					this.longestLabelWidth = largestTextWidth;
 
 					// TODO - improve this calculation
 					var labelHeight = (Math.sin(helpers.toRadians(this.labelRotation)) * this.longestLabelWidth) + 1.5 * this.options.ticks.fontSize;
@@ -321,7 +322,6 @@
 				} else {
 					// A vertical axis is more constrained by the width. Labels are the dominant factor here, so get that length first
 					var maxLabelWidth = this.maxWidth - this.minSize.width;
-					var largestTextWidth = helpers.longestText(this.ctx, labelFont, this.ticks);
 
 					// Account for padding
 					if (!this.options.ticks.mirror) {
@@ -342,15 +342,10 @@
 			}
 
 			if (this.margins) {
-				this.paddingLeft -= this.margins.left;
-				this.paddingTop -= this.margins.top;
-				this.paddingRight -= this.margins.right;
-				this.paddingBottom -= this.margins.bottom;
-
-				this.paddingLeft = Math.max(this.paddingLeft, 0);
-				this.paddingTop = Math.max(this.paddingTop, 0);
-				this.paddingRight = Math.max(this.paddingRight, 0);
-				this.paddingBottom = Math.max(this.paddingBottom, 0);
+				this.paddingLeft = Math.max(this.paddingLeft - this.margins.left, 0);
+				this.paddingTop = Math.max(this.paddingTop - this.margins.top, 0);
+				this.paddingRight = Math.max(this.paddingRight - this.margins.right, 0);
+				this.paddingBottom = Math.max(this.paddingBottom - this.margins.bottom, 0);
 			}
 
 			this.width = this.minSize.width;
@@ -445,6 +440,14 @@
 				var scaleLabelY;
 				var useAutoskipper = this.options.ticks.autoSkip;
 
+
+				// figure out the maximum number of gridlines to show
+				var maxTicks;
+
+				if (this.options.ticks.maxTicksLimit) {
+					maxTicks = this.options.ticks.maxTicksLimit;
+				}
+
 				// Make sure we draw text in the correct color and font
 				this.ctx.fillStyle = this.options.ticks.fontColor;
 				var labelFont = helpers.fontString(this.options.ticks.fontSize, this.options.ticks.fontStyle, this.options.ticks.fontFamily);
@@ -467,10 +470,23 @@
 					if (!useAutoskipper) {
 						skipRatio = false;
 					}
+
+					// if they defined a max number of ticks, 
+					// increase skipRatio until that number is met
+					if (maxTicks && this.ticks.length > maxTicks) {
+						while (!skipRatio || this.ticks.length / (skipRatio || 1) > maxTicks) {
+							if (!skipRatio) {
+								skipRatio = 1;
+							}
+							skipRatio += 1;
+						}
+					}
 					
 					helpers.each(this.ticks, function(label, index) {
 						// Blank ticks
-						if ((skipRatio > 1 && index % skipRatio > 0) || (label === undefined || label === null)) {
+						var isLastTick = this.ticks.length == index + 1;
+						var shouldSkip = skipRatio > 1 && index % skipRatio > 0;
+						if (shouldSkip && !isLastTick || (label === undefined || label === null)) {
 							return;
 						}
 						var xLineValue = this.getPixelForTick(index); // xvalues for grid lines
@@ -603,7 +619,6 @@
 								}
 							}
 
-
 							this.ctx.translate(xLabelValue, yLabelValue);
 							this.ctx.rotate(helpers.toRadians(this.labelRotation) * -1);
 							this.ctx.font = labelFont;
@@ -630,6 +645,26 @@
 						this.ctx.restore();
 					}
 				}
+
+				// Draw the line at the edge of the axis
+				this.ctx.lineWidth = this.options.gridLines.lineWidth;
+				this.ctx.strokeStyle = this.options.gridLines.color;
+				var x1 = this.left, x2 = this.right, y1 = this.top, y2 = this.bottom;
+
+				if (this.isHorizontal()) {
+					y1 = y2 = this.options.position === 'top' ? this.bottom : this.top;
+					y1 += helpers.aliasPixel(this.ctx.lineWidth);
+					y2 += helpers.aliasPixel(this.ctx.lineWidth);
+				} else {
+					x1 = x2 = this.options.position === 'left' ? this.right : this.left;
+					x1 += helpers.aliasPixel(this.ctx.lineWidth);
+					x2 += helpers.aliasPixel(this.ctx.lineWidth);
+				}
+
+				this.ctx.beginPath();
+				this.ctx.moveTo(x1, y1);
+				this.ctx.lineTo(x2, y2);
+				this.ctx.stroke();
 			}
 		}
 	});
